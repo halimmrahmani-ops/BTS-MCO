@@ -1513,7 +1513,7 @@ function renderExamen() {
     {id:'timing_oral',l:'Timing 10+10 min testé'},
   ];
   const oralDone = ORAL.filter(i=>d['oral_'+i.id]==='OUI').length;
-  const qDone = QUESTIONS_BANK.filter(q=>d['q_'+btoa(q.q).slice(0,10)]).length;
+  const qDone = QUESTIONS_BANK.filter(q=>d['q_'+q.q.split('').reduce((a,c)=>((a<<5)-a)+c.charCodeAt(0)|0,0).toString(36).replace('-','n')]).length;
 
   const tabs=[{id:'timer',l:'⏱️ Timer'},{id:'oral',l:'🎤 Checklist'},{id:'questions',l:'❓ Questions'},{id:'grille',l:'📋 Annexe 19'}];
 
@@ -1569,7 +1569,7 @@ function renderExamen() {
     </div>
     <div style="display:flex;flex-direction:column;gap:7px">
       ${QUESTIONS_BANK.map((q,i)=>{
-        const qkey = 'q_'+btoa(q.q).slice(0,10);
+        const qkey = 'q_'+q.q.split('').reduce((a,c)=>((a<<5)-a)+c.charCodeAt(0)|0,0).toString(36).replace('-','n');
         const isC = !!d[qkey];
         const catColors={Projet:'#7c3aed',Marché:'#0891b2',Stratégie:'#059669',Finance:'#d97706',Opérations:'#e9a420',Pitch:'#ef4444'};
         return `<div class="card" style="overflow:hidden;border-left:3px solid ${catColors[q.cat]||'#e9a420'};background:${isC?'rgba(34,197,94,.04)':'var(--bg2)'}">
