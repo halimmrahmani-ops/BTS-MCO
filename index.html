@@ -333,7 +333,7 @@ function IdeeModule({data,setData}){
 function MarcheModule({data,setData}){
   const[tab,setTab]=useState('questions');
   const up=(k,v)=>setData(p=>({...p,[k]:v}));
-  const tabs=[{id:'questions',l:'🔍 Les 6 Questions'},{id:'ca',l:'📈 Estimation CA'},{id:'concurrence',l:'⚔️ Concurrence'}];
+  const tabs=[{id:'questions',l:'🔍 Les 6 Questions'},{id:'ca',l:'📈 Estimation CA'},{id:'concurrence',l:'⚔️ Concurrence'},{id:'enquete',l:'📋 Enquête Terrain'}];
 
   const pn2=k=>parseFloat(data[k])||0;
   const ca_methode1=pn2('nb_clients')*pn2('panier_moyen')*pn2('freq_achat');
@@ -430,6 +430,183 @@ function MarcheModule({data,setData}){
         <textarea value={data.avantage_concurrentiel||''} onChange={e=>up('avantage_concurrentiel',e.target.value)} placeholder="Expliquez en quoi votre offre est supérieure ou différente de chaque concurrent identifié..." rows={3} style={{width:'100%',fontSize:12,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:8,padding:'9px 12px',resize:'none',background:'var(--bg2)'}}/>
       </div>
     </div>)}
+    {tab==='enquete'&&<EnqueteModule data={data} setData={setData}/>}
+  </div>);
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPOSANTS PARTAGÉS : CARTE, RISQUES, ENQUÊTE, IA, SIMUL
+══════════════════════════════════════════════════════ */
+const RISQUES_DEF=[
+  {categorie:'🌍 Environnement général',ph_desc:"Évolution défavorable de la législation, crise économique...",ph_trait:"Veille réglementaire active, diversification, plan de contingence...",niveau:'🟡 Modéré'},
+  {categorie:'📊 Marché & Concurrence',ph_desc:"Mauvaise estimation du marché, manque d'adhésion, concurrent majeur...",ph_trait:"Actions de communication, ajustement de l'offre...",niveau:'🟡 Modéré'},
+  {categorie:'⚙️ Outils opérationnels',ph_desc:"Panne matériel, rupture d'approvisionnement, problème informatique...",ph_trait:"Contrat de maintenance, fournisseurs alternatifs, stock de sécurité...",niveau:'🟢 Faible'},
+  {categorie:'👤 Ressources humaines',ph_desc:"Maladie du dirigeant, départ d'un employé clé, difficulté de recrutement...",ph_trait:"Polyvalence, protocoles documentés, assurance prévoyance...",niveau:'🟡 Modéré'},
+  {categorie:'🤝 Tiers & Partenaires',ph_desc:"Augmentation des prix fournisseurs, cessation relation, client défaillant...",ph_trait:"Plusieurs fournisseurs qualifiés, contrats long terme, assurance crédit...",niveau:'🟡 Modéré'},
+];
+
+function CartePerceptuelle({data,setData}){
+  const upC=(k,v)=>setData(p=>({...p,carte:{...p.carte,[k]:v}}));
+  const c=data.carte||{};
+  const axeH=c.axeH||'Traditionnel ← → Innovant';
+  const axeV=c.axeV||'Peu respectueux ↓ ↑ Très respectueux';
+  const concs=c.concurrents||[{nom:'Concurrent A',x:30,y:40},{nom:'Concurrent B',x:65,y:35}];
+  const monX=parseFloat(c.monX)||75;const monY=parseFloat(c.monY)||75;
+  const nom=c.nomEntreprise||'Mon entreprise';
+  const upConc=(i,f,v)=>{const arr=[...concs];arr[i]={...arr[i],[f]:v};upC('concurrents',arr);};
+  return(<div style={{display:'flex',flexDirection:'column',gap:14}}>
+    <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:12,padding:'10px 15px',fontSize:13,color:'#1e40af'}}><strong>Carte perceptuelle :</strong> Positionnez visuellement votre entreprise face aux concurrents sur 2 axes. Très apprécié à l'oral.</div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+      <div className="card" style={{padding:18}}>
+        <div className="font-display" style={{fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:12}}>⚙️ Configuration</div>
+        <div style={{display:'flex',flexDirection:'column',gap:9}}>
+          {[{k:'axeH',l:'Axe horizontal',v:axeH,ph:'Ex: Traditionnel → Innovant'},{k:'axeV',l:'Axe vertical',v:axeV,ph:'Ex: Prix bas ↑ Prix élevé'},{k:'nomEntreprise',l:'Votre entreprise',v:nom,ph:'Mon entreprise'}].map(f=>(<div key={f.k}><label style={{fontSize:10,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:2}}>{f.l}</label><input type="text" value={f.v} onChange={e=>upC(f.k,e.target.value)} placeholder={f.ph} style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--border)',borderRadius:7,fontSize:12,color:'var(--text)',background:'var(--bg2)'}}/></div>))}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>{[{k:'monX',l:`X = ${monX}`,v:monX},{k:'monY',l:`Y = ${monY}`,v:monY}].map(f=>(<div key={f.k}><label style={{fontSize:10,fontWeight:700,color:'#e9a420',display:'block',marginBottom:2}}>{f.l}</label><input type="range" min="5" max="95" value={f.v} onChange={e=>upC(f.k,e.target.value)} style={{width:'100%',accentColor:'#e9a420'}}/></div>))}</div>
+          <div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}><span style={{fontSize:11,fontWeight:700,color:'var(--text)'}}>Concurrents</span><button onClick={()=>upC('concurrents',[...concs,{nom:`Conc. ${concs.length+1}`,x:50,y:50}])} style={{fontSize:10,padding:'2px 8px',background:'var(--navy)',color:'#fff',border:'none',borderRadius:6,cursor:'pointer'}}>+ Ajouter</button></div>
+            {concs.map((co,i)=>(<div key={i} style={{display:'grid',gridTemplateColumns:'1fr 42px 42px 22px',gap:4,marginBottom:4,alignItems:'center'}}>
+              <input type="text" value={co.nom} onChange={e=>upConc(i,'nom',e.target.value)} style={{padding:'4px 8px',border:'1.5px solid var(--border)',borderRadius:6,fontSize:10,color:'var(--text)',background:'var(--bg2)'}}/>
+              <input type="number" min="0" max="100" value={co.x} onChange={e=>upConc(i,'x',parseInt(e.target.value)||0)} title="X" style={{padding:'4px',border:'1.5px solid var(--border)',borderRadius:6,fontSize:10,textAlign:'center',color:'var(--text)',background:'var(--bg2)'}}/>
+              <input type="number" min="0" max="100" value={co.y} onChange={e=>upConc(i,'y',parseInt(e.target.value)||0)} title="Y" style={{padding:'4px',border:'1.5px solid var(--border)',borderRadius:6,fontSize:10,textAlign:'center',color:'var(--text)',background:'var(--bg2)'}}/>
+              <button onClick={()=>upC('concurrents',concs.filter((_,j)=>j!==i))} style={{background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:5,width:22,height:22,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+            </div>))}
+          </div>
+        </div>
+      </div>
+      <div className="card" style={{padding:14}}>
+        <div className="font-display" style={{fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:8,textAlign:'center'}}>🗺️ Carte perceptuelle</div>
+        <svg viewBox="0 0 300 300" style={{width:'100%',background:'var(--bg3)',borderRadius:10,border:'1.5px solid var(--border)'}}>
+          {[1,2,3].map(i=>[<line key={`h${i}`} x1="15" y1={15+i*67.5} x2="285" y2={15+i*67.5} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,3"/>,<line key={`v${i}`} x1={15+i*67.5} y1="15" x2={15+i*67.5} y2="285" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,3"/>])}
+          <rect x="15" y="15" width="270" height="270" fill="none" stroke="var(--border2)" strokeWidth="1"/>
+          <line x1="15" y1="150" x2="285" y2="150" stroke="var(--text3)" strokeWidth="1.5"/><line x1="150" y1="15" x2="150" y2="285" stroke="var(--text3)" strokeWidth="1.5"/>
+          <polygon points="283,147 290,150 283,153" fill="var(--text3)"/><polygon points="147,17 150,10 153,17" fill="var(--text3)"/>
+          <text x="150" y="296" textAnchor="middle" fontSize="7" fill="var(--text3)" fontFamily="DM Sans,sans-serif">{axeH.slice(0,38)}</text>
+          <text x="8" y="150" textAnchor="middle" fontSize="7" fill="var(--text3)" fontFamily="DM Sans,sans-serif" transform="rotate(-90,8,150)">{axeV.slice(0,28)}</text>
+          {concs.map((co,i)=>{const cx2=15+(co.x/100)*270;const cy2=285-(co.y/100)*270;const cols=['#ef4444','#3b82f6','#8b5cf6','#06b6d4','#f97316'];return(<g key={i}><circle cx={cx2} cy={cy2} r="7.5" fill={cols[i%5]} opacity="0.82"/><text x={cx2} y={cy2-11} textAnchor="middle" fontSize="8" fill="var(--text)" fontFamily="DM Sans,sans-serif" fontWeight="600">{co.nom.slice(0,13)}</text></g>);})}
+          {(()=>{const cx2=15+(monX/100)*270;const cy2=285-(monY/100)*270;return(<g><circle cx={cx2} cy={cy2} r="10" fill="#e9a420" stroke="#fff" strokeWidth="2"/><text x={cx2} y={cy2-14} textAnchor="middle" fontSize="9" fill="#e9a420" fontFamily="DM Sans,sans-serif" fontWeight="700">{nom.slice(0,15)}</text></g>);}  )()}
+          <circle cx="22" cy="292" r="4.5" fill="#e9a420"/><text x="30" y="295" fontSize="7" fill="var(--text)" fontFamily="DM Sans,sans-serif" fontWeight="600">Votre entreprise</text>
+        </svg>
+        <p style={{fontSize:9.5,color:'var(--text4)',marginTop:4,textAlign:'center'}}>Ajustez X/Y (0=gauche/bas → 100=droite/haut)</p>
+      </div>
+    </div>
+    <div className="card" style={{padding:14}}><label style={{fontSize:12,fontWeight:700,color:'var(--text)',display:'block',marginBottom:4}}>📝 Analyse du positionnement</label><textarea value={c.analyse||''} onChange={e=>upC('analyse',e.target.value)} placeholder="Pourquoi ces 2 axes ? Quelle est votre zone de différenciation unique ? Que révèle cette carte ?" rows={3} style={{width:'100%',fontSize:12,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:8,padding:'8px 11px',resize:'none',background:'var(--bg2)'}}/></div>
+  </div>);
+}
+
+function AnalyseRisques({data,setData}){
+  const risques=data.risques||RISQUES_DEF;
+  const upR=(i,f,v)=>setData(p=>{const r=[...(p.risques||RISQUES_DEF)];r[i]={...r[i],[f]:v};return{...p,risques:r};});
+  const NIVEAUX=['🟢 Faible','🟡 Modéré','🔴 Élevé'];
+  const nCol={'🟢 Faible':'#16a34a','🟡 Modéré':'#d97706','🔴 Élevé':'#dc2626'};
+  return(<div style={{display:'flex',flexDirection:'column',gap:13}}>
+    <div style={{background:'#fef9c3',border:'1.5px solid #fde047',borderRadius:12,padding:'10px 15px',fontSize:13,color:'#854d0e'}}><strong>Source : INSECTEOO / BPI France.</strong> Anticiper les risques inspire confiance au jury et aux partenaires financiers.</div>
+    <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>{NIVEAUX.map(n=>{const count=risques.filter(r=>(r.niveau||'🟡 Modéré')===n).length;return(<div key={n} style={{padding:'5px 13px',borderRadius:20,background:`${nCol[n]}14`,border:`1.5px solid ${nCol[n]}40`,fontSize:11,fontWeight:700,color:nCol[n]}}>{n} : {count}</div>);})}</div>
+    <div className="card" style={{overflow:'hidden'}}>
+      <div style={{padding:'10px 15px',background:'var(--navy)'}}><div className="font-display" style={{fontWeight:700,fontSize:14,color:'#fff'}}>Tableau d'Analyse des Risques</div></div>
+      <div style={{overflowX:'auto'}}><table style={{width:'100%',fontSize:11.5,borderCollapse:'collapse',minWidth:600}}>
+        <thead><tr style={{background:'var(--bg3)',borderBottom:'1.5px solid var(--border)'}}><th style={{textAlign:'left',padding:'7px 13px',fontWeight:600,color:'var(--text)',width:165}}>Nature du risque</th><th style={{textAlign:'left',padding:'7px 9px',fontWeight:600,color:'var(--text)'}}>Description</th><th style={{textAlign:'center',padding:'7px',fontWeight:600,color:'var(--text)',width:110}}>Niveau</th><th style={{textAlign:'left',padding:'7px 9px',fontWeight:600,color:'var(--text)'}}>Stratégie de traitement</th></tr></thead>
+        <tbody>{risques.map((r,i)=>(<tr key={i} style={{borderBottom:'1px solid var(--border)',background:i%2?'var(--bg3)':'var(--bg2)'}}>
+          <td style={{padding:'7px 13px',fontWeight:700,color:'var(--text)',fontSize:10.5,verticalAlign:'top'}}>{r.categorie}</td>
+          <td style={{padding:'4px 6px',verticalAlign:'top'}}><textarea value={r.description||''} onChange={e=>upR(i,'description',e.target.value)} placeholder={r.ph_desc} rows={3} style={{width:'100%',fontSize:10.5,color:'var(--text2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 7px',resize:'none',background:'var(--bg2)'}}/></td>
+          <td style={{padding:'4px 6px',textAlign:'center',verticalAlign:'top'}}><select value={r.niveau||'🟡 Modéré'} onChange={e=>upR(i,'niveau',e.target.value)} style={{fontSize:10.5,padding:'4px 6px',border:`1.5px solid ${nCol[r.niveau||'🟡 Modéré']}`,borderRadius:7,background:`${nCol[r.niveau||'🟡 Modéré']}12`,color:nCol[r.niveau||'🟡 Modéré'],cursor:'pointer',fontWeight:700}}>{NIVEAUX.map(n=>(<option key={n}>{n}</option>))}</select></td>
+          <td style={{padding:'4px 6px',verticalAlign:'top'}}><textarea value={r.traitement||''} onChange={e=>upR(i,'traitement',e.target.value)} placeholder={r.ph_trait} rows={3} style={{width:'100%',fontSize:10.5,color:'var(--text2)',border:'1px solid var(--border)',borderRadius:6,padding:'5px 7px',resize:'none',background:'var(--bg2)'}}/></td>
+        </tr>))}</tbody>
+      </table></div>
+    </div>
+  </div>);
+}
+
+function EnqueteModule({data,setData}){
+  const up=(k,v)=>setData(p=>({...p,enq:{...p.enq,[k]:v}}));
+  const enq=data.enq||{};
+  const Bar=({pct})=>{const p=Math.min(100,Math.max(0,parseFloat(pct)||0));return(<div style={{height:5,background:'var(--border2)',borderRadius:3,marginTop:3,flex:1}}><div style={{height:'100%',width:`${p}%`,background:p>=60?'#22c55e':p>=40?'#e9a420':'#ef4444',borderRadius:3,transition:'width .4s'}}/></div>);};
+  const QS=[
+    {k:'q1',l:"Connaissent votre concept",ex:"93% (INSECTEOO)"},
+    {k:'q2',l:"Seraient prêts à essayer",ex:"58% (INSECTEOO)"},
+    {k:'q4',l:"Achèteraient sur place/au stand",ex:"75% (INSECTEOO)"},
+    {k:'q5',l:"Viendraient au triporteur/stand",ex:"62% (INSECTEOO)"},
+  ];
+  return(<div style={{display:'flex',flexDirection:'column',gap:13}}>
+    <div style={{background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:12,padding:'10px 15px',fontSize:13,color:'#166534'}}><strong>Enquête terrain :</strong> Résultats de votre questionnaire auprès des clients potentiels. INSECTEOO avait interrogé 120 personnes en ligne.</div>
+    <div className="card" style={{padding:16}}>
+      <div className="font-display" style={{fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:10}}>📋 Informations générales</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:9}}>{[{k:'nb',l:"Nombre de sondés",ph:"Ex: 120"},{k:'methode',l:"Méthode",ph:"En ligne, face à face..."},{k:'periode',l:"Période",ph:"Ex: Mars-Avril 2024"},{k:'zone',l:"Zone géographique",ph:"Ex: Nantes et environs"}].map(f=>(<div key={f.k}><label style={{fontSize:10,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:2}}>{f.l}</label><input type="text" value={enq[f.k]||''} onChange={e=>up(f.k,e.target.value)} placeholder={f.ph} style={{width:'100%',padding:'6px 10px',border:'1.5px solid var(--border)',borderRadius:7,fontSize:12,color:'var(--text)',background:'var(--bg2)'}}/></div>))}</div>
+    </div>
+    <div className="card" style={{padding:16}}>
+      <div className="font-display" style={{fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:10}}>📊 Résultats clés</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>{QS.map(q=>(<div key={q.k} style={{padding:'10px 13px',background:'var(--bg3)',borderRadius:9,border:'1px solid var(--border)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}>
+          <span style={{fontSize:12,fontWeight:600,color:'var(--text)',flex:1}}>{q.l}</span>
+          <span style={{fontSize:10,color:'var(--text4)',fontStyle:'italic'}}>Réf: {q.ex}</span>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:9}}>
+          <input type="number" min="0" max="100" value={enq[q.k]||''} onChange={e=>up(q.k,e.target.value)} placeholder="%" style={{width:62,padding:'5px 8px',border:'1.5px solid var(--border)',borderRadius:7,fontSize:14,fontWeight:700,textAlign:'center',color:'var(--text)',background:'var(--bg2)'}}/>
+          <span style={{fontSize:11,color:'var(--text3)'}}>%</span>
+          <Bar pct={enq[q.k]}/>
+          <span style={{fontSize:13,fontWeight:700,color:parseFloat(enq[q.k])>=60?'#16a34a':parseFloat(enq[q.k])>=40?'#d97706':'#dc2626',minWidth:35}}>{enq[q.k]?enq[q.k]+'%':'-'}</span>
+        </div>
+      </div>))}
+      <div style={{padding:'10px 13px',background:'var(--bg3)',borderRadius:9,border:'1px solid var(--border)'}}>
+        <label style={{fontSize:12,fontWeight:600,color:'var(--text)',display:'block',marginBottom:5}}>🏆 Produit/concept le plus attractif</label>
+        <input type="text" value={enq.top_produit||''} onChange={e=>up('top_produit',e.target.value)} placeholder="Ex: Grillon grillé 42,5%, Ver de farine 15%, Scarabée 7,5%..." style={{width:'100%',padding:'7px 11px',border:'1.5px solid var(--border)',borderRadius:8,fontSize:12,color:'var(--text)',background:'var(--bg2)'}}/>
+      </div>
+      </div>
+    </div>
+    <div className="card" style={{padding:16}}>
+      <div className="font-display" style={{fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:9}}>👥 Profil des répondants</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(215px,1fr))',gap:9}}>{[{k:'ages',l:'Répartition par âge',ph:"< 18: 2%, 18-25: 14%, 25-35: 21%..."},{k:'statuts',l:'Statut',ph:"Étudiants: 5%, Actifs: 76%, Retraités: 19%"},{k:'genre',l:'Genre',ph:"52% femmes, 48% hommes"}].map(f=>(<div key={f.k}><label style={{fontSize:10,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:3}}>{f.l}</label><textarea value={enq[f.k]||''} onChange={e=>up(f.k,e.target.value)} placeholder={f.ph} rows={2} style={{width:'100%',fontSize:11,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:7,padding:'6px 10px',resize:'none',background:'var(--bg2)'}}/></div>))}</div>
+    </div>
+    <div className="card" style={{padding:14}}><label style={{fontSize:12,fontWeight:700,color:'var(--text)',display:'block',marginBottom:4}}>📝 Analyse et conclusions</label><textarea value={enq.conclusions||''} onChange={e=>up('conclusions',e.target.value)} placeholder="Que révèle cette enquête ? Quels enseignements ? Quelles hypothèses cela valide-t-il ?" rows={3} style={{width:'100%',fontSize:12,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:8,padding:'8px 11px',resize:'none',background:'var(--bg2)'}}/></div>
+  </div>);
+}
+
+function AIAssistant({context,sectionName}){
+  const[open,setOpen]=useState(false);
+  const[loading,setLoading]=useState(false);
+  const[advice,setAdvice]=useState('');
+  const[question,setQuestion]=useState('');
+  const askAI=async(prompt)=>{
+    setLoading(true);setAdvice('');
+    try{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,
+          system:`Tu es un expert en entrepreneuriat et BTS MCO. Tu aides les étudiants à améliorer leur dossier pour l'épreuve E6. Donne des conseils précis, concrets, bienveillants, en français, en 3-5 points max. Sois encourageant.`,
+          messages:[{role:'user',content:`Section : ${sectionName}\nContenu étudiant :\n${JSON.stringify(context,null,2).slice(0,1400)}\nQuestion : ${prompt}`}]})});
+      const d=await res.json();setAdvice(d.content?.[0]?.text||'Pas de réponse');
+    }catch{setAdvice('Erreur de connexion.');}
+    setLoading(false);
+  };
+  const SUGG=['Évalue mon travail sur cette section','Quels éléments manquent encore ?','Questions que le jury peut poser là-dessus ?','Comment améliorer ma présentation orale ?'];
+  if(!open)return(<button onClick={()=>setOpen(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'linear-gradient(135deg,#7c3aed,#a78bfa)',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:600,boxShadow:'0 2px 8px rgba(124,58,237,.3)'}}>🤖 Assistant IA — Conseils personnalisés</button>);
+  return(<div className="card" style={{padding:16,border:'2px solid #a78bfa',background:'rgba(124,58,237,.04)'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+      <div style={{display:'flex',alignItems:'center',gap:8}}><div style={{width:30,height:30,borderRadius:9,background:'linear-gradient(135deg,#7c3aed,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15}}>🤖</div><div><div className="font-display" style={{fontWeight:700,fontSize:13,color:'var(--text)'}}>Assistant IA — {sectionName}</div><p style={{fontSize:10,color:'var(--text3)'}}>Conseils personnalisés sur votre travail</p></div></div>
+      <button onClick={()=>{setOpen(false);setAdvice('');}} style={{background:'transparent',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:15}}>✕</button>
+    </div>
+    <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>{SUGG.map((s,i)=>(<button key={i} onClick={()=>askAI(s)} disabled={loading} style={{padding:'4px 10px',borderRadius:20,fontSize:10.5,fontWeight:500,cursor:'pointer',border:'1.5px solid #a78bfa',background:'rgba(124,58,237,.08)',color:'#7c3aed',opacity:loading?.6:1}}>{s}</button>))}</div>
+    <div style={{display:'flex',gap:7,marginBottom:10}}>
+      <input type="text" value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>e.key==='Enter'&&question&&askAI(question)} placeholder="Votre question à l'IA..." style={{flex:1,padding:'7px 11px',border:'1.5px solid #a78bfa',borderRadius:8,fontSize:12,color:'var(--text)',background:'var(--bg2)'}}/>
+      <button onClick={()=>question&&askAI(question)} disabled={!question||loading} style={{padding:'7px 13px',background:'#7c3aed',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:600}}>↗</button>
+    </div>
+    {loading&&<div style={{textAlign:'center',padding:'14px',color:'#7c3aed',fontSize:12,animation:'fadeIn .3s'}}>🤖 Analyse en cours...</div>}
+    {advice&&<div style={{background:'var(--bg2)',borderRadius:9,padding:'12px 14px',border:'1.5px solid #a78bfa',fontSize:12.5,color:'var(--text2)',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{advice}</div>}
+  </div>);
+}
+
+function SimulateurOral(){
+  const[current,setCurrent]=useState(null);const[elapsed,setElapsed]=useState(0);const[running,setRunning]=useState(false);const[shown,setShown]=useState(false);const ivl=useRef(null);const MAX=120;
+  const draw=()=>{const q=QUESTION_BANK[Math.floor(Math.random()*QUESTION_BANK.length)];setCurrent(q);setElapsed(0);setRunning(true);setShown(false);clearInterval(ivl.current);ivl.current=setInterval(()=>setElapsed(e=>{if(e+1>=MAX){clearInterval(ivl.current);setRunning(false);return MAX;}return e+1;}),1000);};
+  useEffect(()=>()=>clearInterval(ivl.current),[]);
+  const rem=MAX-elapsed;const pct=(elapsed/MAX)*100;const rc=rem<30?'#ef4444':rem<60?'#f59e0b':'#22c55e';
+  return(<div className="card" style={{padding:18,border:'1.5px solid #e9a420',background:'rgba(233,164,32,.03)'}}>
+    <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}><span style={{fontSize:20}}>🎲</span><div><div className="font-display" style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>Simulateur d'oral — Question aléatoire</div><p style={{fontSize:11,color:'var(--text3)'}}>Tirage + 2 min pour répondre</p></div></div>
+    {current&&(<div style={{marginBottom:12}}>
+      <div style={{background:'var(--navy)',borderRadius:11,padding:'12px 16px',marginBottom:9}}><div style={{fontSize:9.5,color:'#e9a420',fontWeight:700,marginBottom:3,textTransform:'uppercase'}}>{current.cat}</div><div style={{fontSize:14,fontWeight:600,color:'#fff',lineHeight:1.5}}>{current.q}</div></div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:7}}><ProgressRing pct={Math.round(pct)} size={55} sw={5} color={rc}/><div style={{flex:1}}><div style={{fontSize:22,fontWeight:700,color:rc,fontVariantNumeric:'tabular-nums'}}>{Math.floor(rem/60)}:{String(rem%60).padStart(2,'0')}</div>{!running&&elapsed>=MAX&&<div style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>⏰ Temps écoulé !</div>}</div><button onClick={()=>setShown(s=>!s)} style={{padding:'6px 12px',background:'rgba(233,164,32,.15)',border:'1.5px solid #e9a420',borderRadius:8,cursor:'pointer',fontSize:11,fontWeight:600,color:'#92400e'}}>{shown?'Masquer':'💡 Conseil'}</button></div>
+      {shown&&<div style={{background:'rgba(8,145,178,.08)',border:'1.5px solid rgba(8,145,178,.25)',borderRadius:8,padding:'9px 12px',fontSize:12,color:'#0891b2',lineHeight:1.6}}>{current.tip}</div>}
+    </div>)}
+    {!current&&<p style={{color:'var(--text3)',fontSize:12,marginBottom:10,textAlign:'center'}}>Tirez une question et répondez en 2 minutes.</p>}
+    <div style={{display:'flex',gap:7}}><button onClick={draw} style={{background:'#e9a420',color:'#fff',padding:'8px 16px',borderRadius:9,fontSize:13,fontWeight:700,border:'none',cursor:'pointer'}}>🎲 Tirer une question</button>{running&&<button onClick={()=>{clearInterval(ivl.current);setRunning(false);}} style={{padding:'8px 12px',background:'var(--bg3)',border:'1.5px solid var(--border)',borderRadius:9,fontSize:12,color:'var(--text3)',cursor:'pointer'}}>⏸</button>}</div>
   </div>);
 }
 
@@ -444,7 +621,7 @@ function DiagnosticModule({data,setData}){
   const upC=(f,v)=>setData(p=>({...p,ciblage:{...p.ciblage,[f]:v}}));
   const autoSwot=()=>setData(p=>({...p,swot:{forces:'• Avantage concurrentiel identifié\n• Compétences spécifiques de l\'équipe\n• Ressources disponibles\n• Connaissance du marché cible',faiblesses:'• Ressources financières initiales limitées\n• Notoriété à construire\n• Dépendance à certains partenaires\n• Manque d\'expérience terrain',opportunites:(p.pestel?.technologique?'Tech: '+p.pestel.technologique.slice(0,60)+'...\n':'')+'• Tendances favorables du marché\n• Nouvelles technologies disponibles',menaces:(p.porter?.rivalite?.analyse?'Rivalité: '+p.porter.rivalite.analyse.slice(0,60)+'...\n':'')+'• Intensité concurrentielle\n• Réglementations contraignantes'}}));
   const porterData=PORTER_FORCES.map(f=>({...f,v:pn(data.porter?.[f.id]?.intensite)||5}));
-  const tabs=[{id:'pestel',l:'PESTEL'},{id:'porter',l:'5 Forces'},{id:'swot',l:'SWOT'},{id:'ciblage',l:'Ciblage'}];
+  const tabs=[{id:'pestel',l:'PESTEL'},{id:'porter',l:'5 Forces'},{id:'swot',l:'SWOT'},{id:'ciblage',l:'Ciblage'},{id:'carte',l:'🗺️ Carte Perceptuelle'},{id:'risques',l:'⚠️ Risques'}];
   return(<div className="section-enter">
     <h1 className="font-display" style={{fontSize:28,fontWeight:700,color:'var(--text)',marginBottom:4}}>Diagnostic Stratégique</h1>
     <p style={{color:'var(--text3)',fontSize:13,marginBottom:20}}>PESTEL, 5 Forces de Porter, SWOT, Segmentation et Positionnement</p>
@@ -463,6 +640,9 @@ function DiagnosticModule({data,setData}){
       <div className="card" style={{padding:18}}><div className="font-display" style={{fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:11}}>Segmentation du Marché</div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))',gap:11}}>{[{k:'seg_geo',l:'📍 Géographique',ph:"Zone, région..."},{k:'seg_demo',l:'👤 Démographique',ph:"Âge, CSP..."},{k:'seg_psycho',l:'🧠 Psychographique',ph:"Style de vie, valeurs..."},{k:'seg_comp',l:'🛒 Comportemental',ph:"Fréquence d'achat..."}].map(s=>(<div key={s.k}><label style={{display:'block',fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:4}}>{s.l}</label><textarea value={data.ciblage?.[s.k]||''} onChange={e=>upC(s.k,e.target.value)} placeholder={s.ph} rows={3} style={{width:'100%',fontSize:12,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:8,padding:'8px 11px',resize:'none',background:'var(--bg2)'}}/></div>))}</div></div>
       <div className="card" style={{padding:18}}><div className="font-display" style={{fontWeight:700,fontSize:15,color:'var(--text)',marginBottom:11}}>Positionnement</div>{[{k:'pos_axe',l:'🎯 Axe',ph:"Leader qualité / Meilleur rapport Q/P..."},{k:'pos_phrase',l:'💬 Phrase de positionnement',ph:"Pour [cible], [marque] est le seul [catégorie] qui [bénéfice]..."},{k:'pos_diff',l:'⚡ Avantages concurrentiels',ph:"Ce qui vous distingue réellement..."}].map(s=>(<div key={s.k} style={{marginBottom:10}}><label style={{display:'block',fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:4}}>{s.l}</label><textarea value={data.ciblage?.[s.k]||''} onChange={e=>upC(s.k,e.target.value)} placeholder={s.ph} rows={2} style={{width:'100%',fontSize:12,color:'var(--text2)',border:'1.5px solid var(--border)',borderRadius:8,padding:'8px 11px',resize:'none',background:'var(--bg2)'}}/></div>))}</div>
     </div>)}
+
+    {tab==='carte'&&<CartePerceptuelle data={data} setData={setData}/>}
+    {tab==='risques'&&<AnalyseRisques data={data} setData={setData}/>}
   </div>);
 }
 
@@ -485,7 +665,7 @@ function BMCModule({data,setData}){
 ══════════════════════════════════════════════════════ */
 function FinanceModule({data,setData}){
   const[tab,setTab]=useState('financement');
-  const tabs=[{id:'financement',l:'💰 Financement'},{id:'cr',l:'📊 Résultat'},{id:'plan3ans',l:'📅 Plan 3 ans'},{id:'treso',l:'🌊 Trésorerie'},{id:'seuil',l:'🎯 Seuil SR'},{id:'textes',l:'🏭 Moyens & RH'}];
+  const tabs=[{id:'financement',l:'💰 Financement'},{id:'cr',l:'📊 Résultat'},{id:'sig',l:'📈 SIG'},{id:'plan3ans',l:'📅 Plan 3 ans'},{id:'treso',l:'🌊 Trésorerie'},{id:'seuil',l:'🎯 Seuil SR'},{id:'textes',l:'🏭 Moyens & RH'}];
   const upFin=(t,k,v)=>setData(p=>({...p,fin:{...p.fin,[t]:{...p.fin?.[t],[k]:v}}}));
   const upCR=(y,k,v)=>setData(p=>({...p,cr:{...p.cr,[y]:{...p.cr?.[y],[k]:v}}}));
   const upTr=(m,k,v)=>setData(p=>({...p,tr:{...p.tr,[m]:{...p.tr?.[m],[k]:v}}}));
@@ -527,7 +707,60 @@ function FinanceModule({data,setData}){
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',padding:'10px 14px',background:'var(--bg3)',borderTop:'1.5px solid var(--border)'}}>{['y1','y2','y3'].map((y,i)=>{const{res,ca}=crCalc(y);const m=ca>0?((res/ca)*100).toFixed(1):0;return(<div key={y} style={{textAlign:'center'}}><p style={{fontSize:10,color:'var(--text3)'}}>Taux marge An.{i+1}</p><p className="font-display" style={{fontSize:19,fontWeight:700,color:res>=0?'#16a34a':'#dc2626'}}>{m}%</p></div>);})}</div>
     </div>)}
 
-    {tab==='plan3ans'&&(<div className="card" style={{overflow:'hidden'}}>
+    {tab==='sig'&&(()=>{
+      const yrs=['y1','y2','y3'];
+      const sig=yrs.map(y=>{
+        const ca=gC(y,'ca'),ach=gC(y,'ach'),cf=gC(y,'cf'),ac=gC(y,'ac'),am=gC(y,'am');
+        const margeComm=ca-ach;
+        const va=margeComm-cf*0.3;
+        const ebe=margeComm-cf-ac;
+        const rex=ebe-am;
+        const txM=ca>0?(margeComm/ca*100).toFixed(1):0;
+        return{ca,ach,margeComm,cf,ac,am,va:Math.max(0,va),ebe,rex,txM};
+      });
+      const rows=[
+        {k:'ca',l:"Chiffre d'Affaires HT",style:{fontWeight:700,background:'rgba(34,197,94,.07)'},fmt:true},
+        {k:'ach',l:'- Coût des ventes (achats)',style:{},fmt:true},
+        {k:'margeComm',l:'= Marge Commerciale / Brute',style:{fontWeight:700,background:'rgba(34,197,94,.12)',color:'#16a34a'},fmt:true,special:true},
+        {k:'txM',l:'  Taux de marge commerciale',style:{fontSize:11,color:'var(--text3)'},fmt:false,suffix:'%'},
+        {k:'cf',l:'- Charges fixes',style:{},fmt:true},
+        {k:'ac',l:'- Autres charges',style:{},fmt:true},
+        {k:'ebe',l:'= EBE (Excédent Brut Exploitation)',style:{fontWeight:700,background:'rgba(8,145,178,.08)',color:'#0891b2'},fmt:true,special:true},
+        {k:'am',l:'- Dotations aux amortissements',style:{},fmt:true},
+        {k:'rex',l:"= Résultat d'Exploitation",style:{fontWeight:700,background:'rgba(124,58,237,.08)'},fmt:true,special:true},
+      ];
+      return(<div style={{display:'flex',flexDirection:'column',gap:13}}>
+        <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:12,padding:'10px 15px',fontSize:13,color:'#1e40af'}}>
+          <strong>Soldes Intermédiaires de Gestion (SIG)</strong> — Calculés automatiquement depuis votre Compte de Résultat. Les SIG décomposent votre résultat en indicateurs de performance à chaque étape de la création de valeur.
+        </div>
+        <div className="card" style={{overflow:'hidden'}}>
+          <div style={{padding:'11px 16px',background:'var(--navy)'}}><div className="font-display" style={{fontWeight:700,fontSize:15,color:'#fff'}}>Tableau des SIG — 3 exercices</div></div>
+          <div style={{overflowX:'auto'}}><table style={{width:'100%',fontSize:12,borderCollapse:'collapse',minWidth:460}}>
+            <thead><tr style={{background:'var(--bg3)',borderBottom:'1.5px solid var(--border)'}}><th style={{textAlign:'left',padding:'8px 14px',fontWeight:600,color:'var(--text)'}}>Solde</th>{['Année 1','Année 2','Année 3'].map(y=><th key={y} style={{textAlign:'right',padding:'8px 12px',fontWeight:600,color:'var(--text)'}}>{y}</th>)}</tr></thead>
+            <tbody>{rows.map((r,ri)=>(<tr key={ri} style={{borderBottom:'1px solid var(--border)',background:r.style.background||'var(--bg2)'}}>
+              <td style={{padding:'7px 14px',fontWeight:r.style.fontWeight||400,color:r.style.color||'var(--text)',fontSize:r.style.fontSize||12}}>{r.l}</td>
+              {sig.map((s,si)=>{const v=s[r.k];return(<td key={si} style={{padding:'7px 12px',textAlign:'right',fontWeight:r.style.fontWeight||400,color:r.special?(v>=0?r.style.color||'#16a34a':'#dc2626'):'var(--text2)',fontSize:12}}>{r.fmt?`${fmt(v)} €`:v+(r.suffix||'')}</td>);})}
+            </tr>))}</tbody>
+          </table></div>
+          <div style={{padding:'12px 16px',background:'var(--bg3)',borderTop:'1px solid var(--border)'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text)',marginBottom:6}}>📖 Rappel des définitions</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:8}}>
+              {[
+                {t:'Marge Commerciale',d:'CA - Coût des ventes. Rentabilité commerciale.'},
+                {t:'EBE',d:"Marge - Charges d'exploitation. Performance opérationnelle avant amortissements."},
+                {t:"Résultat d'exploitation",d:'EBE - Amortissements. Bénéfice généré par l\'activité principale.'},
+                {t:'CAF',d:'Résultat + Amortissements. Ressource interne disponible pour investir ou rembourser.'},
+              ].map((d,i)=>(<div key={i} style={{background:'var(--bg2)',borderRadius:8,padding:'8px 10px',border:'1px solid var(--border)'}}><div style={{fontWeight:700,fontSize:11,color:'var(--text)',marginBottom:2}}>{d.t}</div><div style={{fontSize:10.5,color:'var(--text3)',lineHeight:1.5}}>{d.d}</div></div>))}
+            </div>
+          </div>
+        </div>
+        {/* CAF */}
+        <div className="card" style={{padding:16}}>
+          <div className="font-display" style={{fontWeight:700,fontSize:14,color:'var(--text)',marginBottom:10}}>💡 Capacité d'AutoFinancement (CAF)</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>{sig.map((s,i)=>{const cafVal=s.rex+s.am;return(<div key={i} style={{textAlign:'center',padding:'10px',background:'var(--bg3)',borderRadius:10,border:'1.5px solid var(--border)'}}><div style={{fontSize:10,color:'var(--text3)',marginBottom:2}}>CAF Année {i+1}</div><div className="font-display" style={{fontSize:18,fontWeight:700,color:cafVal>=0?'#059669':'#dc2626'}}>{fmt(cafVal)} €</div><div style={{fontSize:9,color:'var(--text4)'}}>Résultat + Amortissements</div></div>);})}</div>
+        </div>
+      </div>);
+    })()}
       <div style={{padding:'12px 18px',background:'var(--navy)'}}><div className="font-display" style={{fontWeight:700,fontSize:16,color:'#fff'}}>Plan de Financement à 3 ans</div><p style={{fontSize:11,color:'#93c5fd',marginTop:1}}>Source : Guide BPI France — solidité financière à moyen terme</p></div>
       <div style={{padding:'12px 16px',background:'#fffbeb',borderBottom:'1px solid #fde68a',fontSize:12,color:'#92400e'}}>
         <strong>Principe :</strong> Pour l'An 1, reprenez votre plan initial + CAF. Pour An 2 et 3, ne saisissez que les nouveaux éléments. <strong>CAF = Résultat net + Amortissements</strong>
@@ -820,12 +1053,20 @@ function ExamenModule({data,setData}){
   const filteredQ=qFilter==='Toutes'?QUESTION_BANK:QUESTION_BANK.filter(q=>q.cat===qFilter);
   const qDone=QUESTION_BANK.filter(q=>data.qchecked?.[q.q]).length;
   const scores=data.grille||{};const totalG=GRILLE.reduce((s,g,i)=>{const n=pn(scores[i]);return s+(n>0?n*g.coef:0);},0);const maxG=GRILLE.reduce((s,g)=>s+g.coef*20,0);const nf=(totalG/maxG*20).toFixed(1);
-  const tabs=[{id:'timer',l:'⏱️ Timer'},{id:'oral',l:'🎤 Checklist'},{id:'questions',l:'❓ Questions'},{id:'grille',l:'📋 Annexe 19'}];
+  const tabs=[{id:'timer',l:'⏱️ Timer'},{id:'simul',l:'🎲 Simulateur oral'},{id:'oral',l:'🎤 Checklist'},{id:'questions',l:'❓ Questions'},{id:'grille',l:'📋 Annexe 19'}];
 
   return(<div className="section-enter">
     <h1 className="font-display" style={{fontSize:28,fontWeight:700,color:'var(--text)',marginBottom:4}}>Préparation à l'Examen</h1>
     <p style={{color:'var(--text3)',fontSize:13,marginBottom:20}}>Timer officiel, checklist oral, banque de questions, simulateur Annexe 19</p>
     <div style={{display:'flex',gap:6,marginBottom:20,flexWrap:'wrap'}}>{tabs.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} className={tab===t.id?'tab-active':'tab-inactive'} style={{padding:'7px 14px',borderRadius:10,fontSize:13,fontWeight:500,cursor:'pointer',border:'1.5px solid transparent'}}>{t.l}</button>))}</div>
+
+    {tab==='simul'&&(<div style={{display:'flex',flexDirection:'column',gap:16}}>
+      <SimulateurOral/>
+      <div style={{padding:'12px 16px',background:'var(--bg3)',borderRadius:12,border:'1.5px solid var(--border)',fontSize:13,color:'var(--text3)'}}>
+        <strong style={{color:'var(--text)'}}>💡 Comment utiliser le simulateur :</strong> Cliquez sur "Tirer une question", réfléchissez et répondez à voix haute en 2 minutes maximum, comme face au vrai jury. Utilisez le conseil si vous êtes bloqué. Répétez jusqu'à vous sentir à l'aise sur toutes les catégories.
+      </div>
+      <AIAssistant context={{section:'préparation oral',questions_preparees:Object.keys(data.qchecked||{}).length}} sectionName="Préparation Oral"/>
+    </div>)}
 
     {tab==='timer'&&(<div className="card" style={{padding:22,textAlign:'center'}}>
       <div className="font-display" style={{fontWeight:700,fontSize:18,color:'var(--text)',marginBottom:4}}>⏱️ Chronomètre Oral Officiel</div>
@@ -955,12 +1196,12 @@ function App(){
           </div>
         </div>
         {sec==='dashboard'&&<Dashboard cl={cl} setCl={setCl} toast={add}/>}
-        {sec==='idee'&&<IdeeModule data={idee} setData={setIdee}/>}
-        {sec==='marche'&&<MarcheModule data={marche} setData={setMarche}/>}
-        {sec==='diagnostic'&&<DiagnosticModule data={diag} setData={setDiag}/>}
-        {sec==='bmc'&&<BMCModule data={bmc} setData={setBmc}/>}
+        {sec==='idee'&&<div><IdeeModule data={idee} setData={setIdee}/><div style={{marginTop:16}}><AIAssistant context={idee} sectionName="Idée & Validation"/></div></div>}
+        {sec==='marche'&&<div><MarcheModule data={marche} setData={setMarche}/><div style={{marginTop:16}}><AIAssistant context={marche} sectionName="Étude de Marché"/></div></div>}
+        {sec==='diagnostic'&&<div><DiagnosticModule data={diag} setData={setDiag}/><div style={{marginTop:16}}><AIAssistant context={diag} sectionName="Diagnostic Stratégique"/></div></div>}
+        {sec==='bmc'&&<div><BMCModule data={bmc} setData={setBmc}/><div style={{marginTop:16}}><AIAssistant context={bmc} sectionName="Business Model Canvas"/></div></div>}
         {sec==='finance'&&<FinanceModule data={fin} setData={setFin}/>}
-        {sec==='marketing'&&<MarketingModule data={mkt} setData={setMkt}/>}
+        {sec==='marketing'&&<div><MarketingModule data={mkt} setData={setMkt}/><div style={{marginTop:16}}><AIAssistant context={mkt} sectionName="Marketing & Lancement"/></div></div>}
         {sec==='gestion'&&<GestionModule data={gest} setData={setGest} finData={fin}/>}
         {sec==='outils'&&<OutilsModule data={outils} setData={setOutils}/>}
         {sec==='examen'&&<ExamenModule data={exam} setData={setExam}/>}
