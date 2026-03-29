@@ -50,6 +50,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 </head>
 <body><div id="root"></div>
 <script type="text/babel">
+/* ═══ PARTIE 1/4 : Données, utils, composants de base, Dashboard, Idée ═══ */
+const {useState,useEffect,useRef,useCallback}=React;
 const {useState,useEffect,useRef,useCallback}=React;
 
 /* ══════════════════════════════════════════════════════
@@ -330,6 +332,12 @@ function IdeeModule({data,setData}){
 /* ══════════════════════════════════════════════════════
    3. ÉTUDE DE MARCHÉ (nouveau)
 ══════════════════════════════════════════════════════ */
+</script>
+
+<script type="text/babel">
+/* ═══ PARTIE 2/4 : Étude de Marché, Carte, Risques, Enquête, IA, Simul ═══ */
+const {useState,useEffect,useRef,useCallback}=React;
+
 function MarcheModule({data,setData}){
   const[tab,setTab]=useState('questions');
   const up=(k,v)=>setData(p=>({...p,[k]:v}));
@@ -613,6 +621,12 @@ function SimulateurOral(){
 /* ══════════════════════════════════════════════════════
    4. DIAGNOSTIC (PESTEL/Porter/SWOT/Ciblage)
 ══════════════════════════════════════════════════════ */
+</script>
+
+<script type="text/babel">
+/* ═══ PARTIE 3/4 : Diagnostic, BMC, Finance ═══ */
+const {useState,useEffect,useRef,useCallback}=React;
+
 function DiagnosticModule({data,setData}){
   const[tab,setTab]=useState('pestel');
   const upP=(id,v)=>setData(p=>({...p,pestel:{...p.pestel,[id]:v}}));
@@ -807,6 +821,12 @@ function FinanceModule({data,setData}){
 /* ══════════════════════════════════════════════════════
    7. MARKETING & LANCEMENT (nouveau)
 ══════════════════════════════════════════════════════ */
+</script>
+
+<script type="text/babel">
+/* ═══ PARTIE 4/4 : Marketing, Gestion, Outils, Examen, Sidebar, App ═══ */
+const {useState,useEffect,useRef,useCallback}=React;
+
 function MarketingModule({data,setData}){
   const[tab,setTab]=useState('mix');
   const up=(k,v)=>setData(p=>({...p,[k]:v}));
